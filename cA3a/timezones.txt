@@ -1,0 +1,3 @@
+Chicago, Austin is central
+Toronto, Atlanta, Buffalo is Eastern
+Denver, Santa Fe is Mountain
