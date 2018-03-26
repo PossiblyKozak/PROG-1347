@@ -15,6 +15,9 @@ const int BUFFALO = 6;
 
 int getNum(void);
 void localizedTime(int, int);
+int getTimezoneModifier(int, int);
+int getTimezone(int);
+void localizedTime(int, int);
 
 int main()
 {
@@ -38,26 +41,86 @@ int main()
 
 	printf("Please enter your departure time index: ");
 	int departureTime = getNum();
-
-	/*while (currentCity != endingCity)
-	{
-
-	}*/
+	int currentTime = departureTime;
 
 	printf("Flying from %s to %s\n", cities[startingCity], cities[endingCity]);
-
-	char time[15] = { 0 };
 	printf("Starting from %s at ", cities[startingCity]);
 	localizedTime(departureTime, currentCity);	
 
-	double* torontoFlights = getTorontoFlights(1);
+	for (int i = 0; i < 7; i++)
+	{
+		int possibleDirection = getBestFlightOut(currentTime, currentCity, i);
+		if (possibleDirection != 0)
+		{
+			
+		}
+	}
 
 	return 0;
 }
 
+int getBestFlightOut(int currentTime, int currentCity, int destinationCity)
+{
+	int* flightOut = getFlights(currentCity, destinationCity);
+	int allFlightsOut[32] = { 0 };
+	int selectedFlightIndex = 0;
+	int selectedArrivalTime = 2400;
+
+	if (flightOut[0] != 0)
+	{
+		for (int i = 1; i < flightOut[0] * 2; i += 2)
+		{
+			allFlightsOut[i - 1] = flightOut[i];
+			allFlightsOut[i] = flightOut[i + 1];
+			if (allFlightsOut[i - 1] >= currentTime && allFlightsOut[i - 1] + allFlightsOut[i] < selectedArrivalTime)
+			{
+				selectedArrivalTime = allFlightsOut[i - 1] + allFlightsOut[i];
+				selectedFlightIndex = i - 1;
+			}
+		}
+		if (selectedArrivalTime == 2400)
+		{
+			selectedArrivalTime = getBestFlightOut(0, currentCity, destinationCity);
+		}
+	}
+	else
+	{
+		selectedArrivalTime = 0;
+	}
+	return selectedArrivalTime;
+}
+
+int getTimezoneModifier(int currentCity, int destinationCity)
+{
+	int currTimezone = getTimezone(currentCity);
+	int destTimezone = getTimezone(destinationCity);
+	return (destTimezone - currTimezone * 100);
+}
+
+int getTimezone(int currentCity)
+{
+	int currTimezone = 0;
+	if (currentCity == 0 || currentCity == 1 || currentCity == 6)
+	{
+		currTimezone = 2;
+	}
+	else if (currentCity == 2 || currentCity == 5)
+	{
+		currTimezone = 1;
+	}
+	else if (currentCity == 3 || currentCity == 4)
+	{
+		currTimezone = 0;
+	}
+	return currTimezone;
+}
+
 void localizedTime(int standardTime, int currentCity)
 {
+	char timezone = ' ';
 	bool isPM = false;
+	int currTimezone = getTimezone(currentCity);
+
 	if (standardTime > 1200)
 	{
 		isPM = true;
@@ -65,20 +128,20 @@ void localizedTime(int standardTime, int currentCity)
 		{
 			standardTime -= 1200;
 		}
-	}
-	char timezone = ' ';
-	if (currentCity == 0 || currentCity == 1 || currentCity == 6)
+	}		
+	if (currTimezone == 0)
 	{
 		timezone = 'E';
 	}
-	else if (currentCity == 3 || currentCity == 4)
-	{
-		timezone = 'M';
-	}
-	else if (currentCity == 2 || currentCity == 5)
+	else if (currTimezone == 1)
 	{
 		timezone = 'C';
 	}
+	else if (currTimezone == 2)
+	{
+		timezone = 'M';
+	}
+
 	int h10 = (char)(standardTime / 1000);
 
 	char output[15] = { (char)(standardTime / 1000) + 48, (char)((standardTime / 100) % 10) + 48, ':', (char)((standardTime / 10) % 10) + 48 , (char)(standardTime % 10) + 48, ' ', isPM ? 'p' : 'a', '.', 'm', '.', ' ', timezone, 'S', 'T', '\0' };
