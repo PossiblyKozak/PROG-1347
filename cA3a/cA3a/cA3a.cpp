@@ -14,10 +14,112 @@ const int CHICAGO = 5;
 const int BUFFALO = 6;
 
 int getNum(void);
-void localizedTime(int, int);
+void localizedTime(int, int, bool);
+int getBestFlightOut(int, int, int);
 int getTimezoneModifier(int, int);
 int getTimezone(int);
-void localizedTime(int, int);
+int convertToTime(int);
+char intToChar(int);
+void printCityName(int);
+
+struct node
+{
+	int departingCity;
+	int arrivingCity;
+	int departingTime;
+	int arrivingTime;
+	node *next;
+};
+
+class list
+{
+private:
+	node *head, *tail;
+public:
+	list()
+	{
+		head = NULL;
+		tail = NULL;
+	}
+
+	void createNode(int departingCity, int arrivingCity, int departingTime, int arrivingTime)
+	{
+		node *temp = new node;
+		temp->departingCity = departingCity;
+		temp->arrivingCity = arrivingCity;
+		temp->departingTime = departingTime;
+		temp->arrivingTime = arrivingTime;
+		temp->next = NULL;
+		if (head == NULL)
+		{
+			head = temp;
+			tail = temp;
+			temp = NULL;
+		}
+		else
+		{
+			tail->next = temp;
+			tail = temp;
+		}
+	}
+
+	void display()
+	{
+		node *temp = new node;
+		temp = head;
+
+		//cout << "Starting from" << temp->departingCity << " at ";
+
+		while (temp != NULL)
+		{
+			cout << "Leaving ";
+			printCityName(temp->departingCity);
+			cout << " at ";
+			localizedTime(temp->departingTime, temp->arrivingCity, false);
+			if (temp->departingTime > temp->arrivingTime)
+			{
+				cout << " next day";
+			}
+			cout << " for ";
+			printCityName(temp->arrivingCity);
+			cout << "\n" << "Arriving in ";
+			printCityName(temp->arrivingCity);
+			cout << " at ";
+			localizedTime(temp->arrivingTime, temp->arrivingCity, false);		
+			cout << "\n";
+			temp = temp->next;
+		}
+	}
+
+	bool notArrived(int arrivingCity)
+	{
+		bool untouched = true;
+		node *temp = new node;
+		temp = head;
+		while (temp != NULL)
+		{
+			if (temp->departingCity == arrivingCity)
+			{
+				untouched = false;
+			}
+			temp = temp->next;
+		}
+		return untouched;
+	}
+
+	void copyList(list ls)
+	{
+		node *temp = new node;
+		temp = ls.head;
+		while (temp != NULL)
+		{
+			createNode(temp->departingCity, temp->arrivingCity, temp->departingTime, temp->arrivingTime);
+			temp = temp->next;
+		}
+	}
+};
+
+void branchFromAirport(list, int, int, int);
 
 int main()
 {
@@ -45,18 +147,49 @@ int main()
 
 	printf("Flying from %s to %s\n", cities[startingCity], cities[endingCity]);
 	printf("Starting from %s at ", cities[startingCity]);
-	localizedTime(departureTime, currentCity);	
+	localizedTime(departureTime, currentCity, true);	
 
 	for (int i = 0; i < 7; i++)
 	{
 		int possibleDirection = getBestFlightOut(currentTime, currentCity, i);
 		if (possibleDirection != 0)
 		{
-			
+			list ls;
+			ls.createNode(currentCity, i, currentTime, possibleDirection + getTimezoneModifier(currentCity, endingCity));
+			branchFromAirport(ls, i, possibleDirection + getTimezoneModifier(currentCity, endingCity), endingCity);
 		}
 	}
 
 	return 0;
+}
+
+void printCityName(int city)
+{
+	char cities[7][10] = { "Toronto", "Atlanta", "Austin", "Santa Fe", "Denver", "Chicago", "Buffalo" };
+	printf("%s", cities[city]);	
+}
+
+void branchFromAirport(list ls, int currentCity, int currentTime, int endingCity)
+{
+	if (currentCity != endingCity)
+	{
+		for (int i = 0; i < 7; i++)
+		{
+			int possibleDirection = getBestFlightOut(currentTime, currentCity, i);
+			if (possibleDirection != 0 && ls.notArrived(i))
+			{
+				list lsNew;
+				lsNew.copyList(ls);
+				lsNew.createNode(currentCity, i, currentTime, possibleDirection + getTimezoneModifier(currentCity, endingCity));
+				branchFromAirport(lsNew, i, possibleDirection + getTimezoneModifier(currentCity, endingCity), endingCity);
+			}
+		}
+	}
+	else
+	{
+		ls.display();
+		printf("\n");
+	}
 }
 
 int getBestFlightOut(int currentTime, int currentCity, int destinationCity)
@@ -72,15 +205,15 @@ int getBestFlightOut(int currentTime, int currentCity, int destinationCity)
 		{
 			allFlightsOut[i - 1] = flightOut[i];
 			allFlightsOut[i] = flightOut[i + 1];
-			if (allFlightsOut[i - 1] >= currentTime && allFlightsOut[i - 1] + allFlightsOut[i] < selectedArrivalTime)
+			if (allFlightsOut[i - 1] >= currentTime % 2400 && convertToTime(allFlightsOut[i - 1] + allFlightsOut[i]) < selectedArrivalTime)
 			{
-				selectedArrivalTime = allFlightsOut[i - 1] + allFlightsOut[i];
+				selectedArrivalTime = convertToTime(allFlightsOut[i - 1] + allFlightsOut[i]);
 				selectedFlightIndex = i - 1;
 			}
 		}
 		if (selectedArrivalTime == 2400)
 		{
-			selectedArrivalTime = getBestFlightOut(0, currentCity, destinationCity);
+			selectedArrivalTime = getBestFlightOut(2400, currentCity, destinationCity);
 		}
 	}
 	else
@@ -88,6 +221,16 @@ int getBestFlightOut(int currentTime, int currentCity, int destinationCity)
 		selectedArrivalTime = 0;
 	}
 	return selectedArrivalTime;
+}
+
+int convertToTime(int time)
+{
+	int newTime = time;
+	if (time % 100 >= 60)
+	{
+		newTime += 40;
+	}
+	return newTime;
 }
 
 int getTimezoneModifier(int currentCity, int destinationCity)
@@ -115,7 +258,7 @@ int getTimezone(int currentCity)
 	return currTimezone;
 }
 
-void localizedTime(int standardTime, int currentCity)
+void localizedTime(int standardTime, int currentCity, bool newLine)
 {
 	char timezone = ' ';
 	bool isPM = false;
@@ -126,7 +269,7 @@ void localizedTime(int standardTime, int currentCity)
 		isPM = true;
 		if (standardTime > 1300)
 		{
-			standardTime -= 1200;
+			//standardTime -= 1200;
 		}
 	}		
 	if (currTimezone == 0)
@@ -144,8 +287,17 @@ void localizedTime(int standardTime, int currentCity)
 
 	int h10 = (char)(standardTime / 1000);
 
-	char output[15] = { (char)(standardTime / 1000) + 48, (char)((standardTime / 100) % 10) + 48, ':', (char)((standardTime / 10) % 10) + 48 , (char)(standardTime % 10) + 48, ' ', isPM ? 'p' : 'a', '.', 'm', '.', ' ', timezone, 'S', 'T', '\0' };
-	printf("%s\n", output);	
+	char output[15] = { intToChar(standardTime / 1000), intToChar((standardTime / 100) % 10), ':', intToChar((standardTime / 10) % 10), intToChar(standardTime % 10), ' ', isPM ? 'p' : 'a', '.', 'm', '.', ' ', timezone, 'S', 'T', '\0' };
+	printf("%s", output);	
+	if (newLine)
+	{
+		printf("\n");
+	}
+}
+
+char intToChar(int time)
+{
+	return (char)(time + 48);
 }
 
 #pragma warning(disable: 4996)
