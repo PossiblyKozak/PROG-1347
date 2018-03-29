@@ -5,13 +5,33 @@
 
 using namespace std;
 
-const int TORONTO = 0;
-const int ATLANTA = 1;
-const int AUSTIN = 2;
-const int SANTAFE = 3;
-const int DENVER = 4;
-const int CHICAGO = 5;
-const int BUFFALO = 6;
+const int FULLDAY = 2400;
+const int NOON = 1200;
+
+
+
+enum cities
+{
+	NUM_CITIES = 7,
+	TORONTO = 0,
+	ATLANTA = 1,
+	AUSTIN = 2,
+	SANTAFE = 3,
+	DENVER = 4,
+	CHICAGO = 5,
+	BUFFALO = 6
+};
+
+
+
+enum timezones
+{
+	EASTERN = 0,
+	CENTRAL = 1,
+	MOUNTAIN = 2
+};
+
+
 
 int getNum(void);
 void localizedTime(int, int, bool);
@@ -19,7 +39,8 @@ int getTimezoneModifier(int, int);
 int getTimezone(int);
 int convertToTime(int);
 char intToChar(int);
-void printCityName(int);
+
+
 
 struct node
 {
@@ -30,14 +51,15 @@ struct node
 	node *next;
 };
 
-class flightTime
-{
-private:
 
-public:
+
+struct flightTime
+{
 	int flightDeparture;
 	int flightArrival;
 };
+
+
 
 class list
 {
@@ -71,36 +93,29 @@ public:
 		}
 	}
 
-	void display(int finalTime, int* currentFastest)
+	void display(int finalTime)
 	{
+		char cities[NUM_CITIES][10] = { "Toronto", "Atlanta", "Austin", "Santa Fe", "Denver", "Chicago", "Buffalo" };
 		node *temp = new node;
 		temp = head;
 		int days = 0;
 
-		//cout << "Starting from" << temp->departingCity << " at ";
-
 		while (temp != NULL)
 		{
-			cout << "Leaving ";
-			printCityName(temp->departingCity);
-			cout << " at ";
+			char out[10] = { 0 };
+			cout << cities[temp->arrivingCity] << "Leaving " << cities[temp->departingCity] << " at ";
 			localizedTime(temp->departingTime, temp->departingCity, false);
-			if (temp->departingTime / 2400 > days)
+			if (temp->departingTime / FULLDAY > days)
 			{
 				cout << " next day";
 				days++;
 			}
-			cout << " for ";
-			printCityName(temp->arrivingCity);
-			cout << "\n" << "Arriving in ";
-			printCityName(temp->arrivingCity);
-			cout << " at ";
+			cout << " for " << cities[temp->arrivingCity] << "\n" << "Arriving in " << cities[temp->arrivingCity] << " at ";
 			localizedTime(temp->arrivingTime, temp->arrivingCity, false);
 			cout << "\n";
 			temp = temp->next;
 		}
-		cout << "Total travel time: " << finalTime / 100 << ":" << finalTime % 100 / 10 << finalTime % 10 << endl;
-		//cout << finalTime << " --> " << *currentFastest << endl;
+		cout << "Total travel time: " << finalTime / 100 << ":" << finalTime % 100 / 10 << finalTime % 10 << endl << endl;
 	}
 
 	bool notArrived(int arrivingCity)
@@ -147,92 +162,42 @@ public:
 	}
 };
 
-flightTime getBestFlightOut(int, int, int);
+
+
 void branchFromAirport(list, int, int, int, int*, list*, int);
+flightTime getBestFlightOut(int, int, int);
 
-int main()
-{
-	char cities[7][10] = { "Toronto", "Atlanta", "Austin", "Santa Fe", "Denver", "Chicago", "Buffalo" };
-	for (int i = 0; i < 7; i++)
-	{
-		printf("%d: %s \t--> -%d GMT\n", i, cities[i], getTimezone(i) + 5);
-	}
-	int startingCity = 999;
-	int endingCity = 999;
 
-	printf("Please enter your starting city index: ");
-	while (startingCity > 6 || startingCity < 0)
-	{
-		startingCity = getNum();
-	}
 
-	printf("Please enter your ending city index: ");
-	while (endingCity > 6 || endingCity < 0)
-	{
-		endingCity = getNum();
-	}
-
-	int currentCity = startingCity;
-
-	printf("Please enter your departure time (hhmm): ");
-	int departureTime = getNum();
-	int currentTime = departureTime;
-
-	printf("Flying from %s to %s\n", cities[startingCity], cities[endingCity]);
-	printf("Starting from %s at ", cities[startingCity]);
-	localizedTime(departureTime, currentCity, true);
-
-	int currentFastest = INT32_MAX;
-	list currentFastestRoute;
-
-	for (int i = 0; i < 7; i++)
-	{
-		flightTime ft = getBestFlightOut(currentTime, currentCity, i);
-		if (ft.flightArrival != 0)
-		{
-			list ls;
-			ls.createNode(currentCity, i, ft.flightDeparture, ft.flightArrival + getTimezoneModifier(currentCity, i));
-			branchFromAirport(ls, i, ft.flightArrival + getTimezoneModifier(currentCity, i), endingCity, &currentFastest, &currentFastestRoute, departureTime);
-		}
-	}
-	currentFastestRoute.display(currentFastestRoute.getEndTime() - departureTime + getTimezoneModifier(startingCity, endingCity), &currentFastest);
-	return 0;
-}
-
-void printCityName(int city)
-{
-	char cities[7][10] = { "Toronto", "Atlanta", "Austin", "Santa Fe", "Denver", "Chicago", "Buffalo" };
-	printf("%s", cities[city]);
-}
-
-void branchFromAirport(list ls, int currentCity, int currentTime, int endingCity, int *currentFastest, list *currentFastestRoute, int departureTime)
+void branchFromAirport(list ls, int currentCity, int currentTime, int endingCity, int *pCurrentFastest, list *pCurrentFastestRoute, int departureTime)
 {
 	if (currentCity != endingCity)
 	{
-		for (int i = 0; i < 7; i++)
+		for (int i = TORONTO; i < NUM_CITIES; i++)
 		{
 			flightTime ft = getBestFlightOut(currentTime, currentCity, i);
-			if (ft.flightArrival != 0 && ls.notArrived(i) && currentTime - departureTime + getTimezoneModifier(ls.getStartCity(), currentCity) < *currentFastest)
+			if (ft.flightArrival != 0 && ls.notArrived(i) && currentTime - departureTime + getTimezoneModifier(ls.getStartCity(), currentCity) < *pCurrentFastest)
 			{
 				list lsNew;
 				lsNew.copyList(ls);
 				lsNew.createNode(currentCity, i, ft.flightDeparture, ft.flightArrival + getTimezoneModifier(currentCity, i));
-				branchFromAirport(lsNew, i, ft.flightArrival + getTimezoneModifier(currentCity, i), endingCity, currentFastest, currentFastestRoute, departureTime);
+				branchFromAirport(lsNew, i, ft.flightArrival + getTimezoneModifier(currentCity, i), endingCity, pCurrentFastest, pCurrentFastestRoute, departureTime);
 			}
 		}
 	}
 	else
 	{
-		if (currentTime - departureTime + getTimezoneModifier(ls.getStartCity(), currentCity) <= *currentFastest || *currentFastest == 0)
+		if (currentTime - departureTime + getTimezoneModifier(ls.getStartCity(), currentCity) <= *pCurrentFastest || *pCurrentFastest == 0)
 		{
 			list blankList;
-			currentFastestRoute->clearList();
-			*currentFastest = currentTime - departureTime + getTimezoneModifier(ls.getStartCity(), currentCity);
-			currentFastestRoute->copyList(ls);
+			pCurrentFastestRoute->clearList();
+			*pCurrentFastest = currentTime - departureTime + getTimezoneModifier(ls.getStartCity(), currentCity);
+			pCurrentFastestRoute->copyList(ls);
 		}		
-		//ls.display(currentTime - departureTime + getTimezoneModifier(ls.getStartCity(), endingCity), currentFastest);
 	}
 }
+
+
 
 flightTime getBestFlightOut(int currentTime, int currentCity, int destinationCity)
 {
@@ -240,7 +205,7 @@ flightTime getBestFlightOut(int currentTime, int currentCity, int destinationCit
 	int allFlightsOut[32] = { 0 };
 	int selectedFlightIndex = 0;
 	flightTime ft;
-	ft.flightArrival = 2400;
+	ft.flightArrival = FULLDAY;
 	ft.flightDeparture = currentTime;
 
 	if (flightOut[0] != 0)
@@ -249,16 +214,16 @@ flightTime getBestFlightOut(int currentTime, int currentCity, int destinationCit
 		{
 			allFlightsOut[i - 1] = flightOut[i];
 			allFlightsOut[i] = flightOut[i + 1];
-			if (allFlightsOut[i - 1] >= currentTime % 2400 && convertToTime(allFlightsOut[i - 1] + allFlightsOut[i]) < ft.flightArrival)
+			if (allFlightsOut[i - 1] >= currentTime % FULLDAY && convertToTime(allFlightsOut[i - 1] + allFlightsOut[i]) < ft.flightArrival)
 			{
-				ft.flightArrival = convertToTime(allFlightsOut[i - 1] + allFlightsOut[i]) + (currentTime / 2400 * 2400);
-				ft.flightDeparture = convertToTime(allFlightsOut[i - 1]) + (currentTime / 2400 * 2400);
+				ft.flightArrival = convertToTime(allFlightsOut[i - 1] + allFlightsOut[i]) + (currentTime / FULLDAY * FULLDAY);
+				ft.flightDeparture = convertToTime(allFlightsOut[i - 1]) + (currentTime / FULLDAY * FULLDAY);
 				selectedFlightIndex = i - 1;
 			}
 		}
-		if (ft.flightArrival == 2400)
+		if (ft.flightArrival == FULLDAY)
 		{
-			ft = getBestFlightOut(2400, currentCity, destinationCity);
+			ft = getBestFlightOut((currentTime + FULLDAY) / FULLDAY * FULLDAY, currentCity, destinationCity);
 		}
 	}
 	else
@@ -268,6 +233,8 @@ flightTime getBestFlightOut(int currentTime, int currentCity, int destinationCit
 	}
 	return ft;
 }
+
+
 
 int convertToTime(int time)
 {
@@ -279,6 +246,8 @@ int convertToTime(int time)
 	return newTime;
 }
 
+
+
 int getTimezoneModifier(int currentCity, int destinationCity)
 {
 	int currTimezone = getTimezone(currentCity);
@@ -287,47 +256,51 @@ int getTimezoneModifier(int currentCity, int destinationCity)
 	return x;
 }
 
+
+
 int getTimezone(int currentCity)
 {
-	int currTimezone = 0;
-	if (currentCity == 0 || currentCity == 1 || currentCity == 6)
+	int currTimezone = EASTERN;
+	if (currentCity == TORONTO || currentCity == ATLANTA || currentCity == BUFFALO)
 	{
-		currTimezone = 0;
+		currTimezone = EASTERN;
 	}
-	else if (currentCity == 2 || currentCity == 5)
+	else if (currentCity ==  AUSTIN || currentCity == CHICAGO)
 	{
-		currTimezone = 1;
+		currTimezone = CENTRAL;
 	}
-	else if (currentCity == 3 || currentCity == 4)
+	else if (currentCity == DENVER || currentCity == SANTAFE)
 	{
-		currTimezone = 2;
+		currTimezone = MOUNTAIN;
 	}
 	return currTimezone;
 }
+
+
 
 void localizedTime(int standardTime, int currentCity, bool newLine)
 {
 	char timezone = ' ';
 	bool isPM = false;
 	int currTimezone = getTimezone(currentCity);
-	standardTime = standardTime % 2400;
-	if (standardTime > 1200)
+	standardTime = standardTime % FULLDAY;
+	if (standardTime > NOON)
 	{
 		isPM = true;
-		if (standardTime > 1300)
+		if (standardTime > NOON + 100)
 		{
-			standardTime -= 1200;
+			standardTime -= NOON;
 		}
 	}
-	if (currTimezone == 0)
+	if (currTimezone == EASTERN)
 	{
 		timezone = 'E';
 	}
-	else if (currTimezone == 1)
+	else if (currTimezone == CENTRAL)
 	{
 		timezone = 'C';
 	}
-	else if (currTimezone == 2)
+	else if (currTimezone == MOUNTAIN)
 	{
 		timezone = 'M';
 	}
@@ -345,17 +318,21 @@ void localizedTime(int standardTime, int currentCity, bool newLine)
 	}
 
 	char output[15] = { tensHours, onesHours, ':', intToChar((standardTime / 10) % 10), intToChar(standardTime % 10), ' ', isPM ? 'p' : 'a', '.', 'm', '.', ' ', timezone, 'S', 'T', '\0' };
-	printf("%s", output);
+	cout << output;
 	if (newLine)
 	{
-		printf("\n");
+		cout << endl;
 	}
 }
+
+
 
 char intToChar(int time)
 {
 	return (char)(time + 48);
 }
+
+
 
 #pragma warning(disable: 4996)
 int getNum(void)
@@ -375,4 +352,100 @@ int getNum(void)
 		number = -1;
 	}
 	return number;
+}
+
+
+
+void printCityHeader()
+{
+	char cities[NUM_CITIES][10] = { "Toronto", "Atlanta", "Austin", "Santa Fe", "Denver", "Chicago", "Buffalo" };
+	for (int i = 0; i < 7; i++)
+	{
+		cout << "City #"<< i << ": " << cities[i] << endl;
+	}
+	cout << "Enter 7 to exit the program" << endl << endl;
+}
+
+
+
+bool getUserInformation(int * pStartingCity, int * pEndingCity, int * pDepartureTime)
+{
+	bool exitProgram = false;
+	cout << "Please enter your starting city index: ";
+	while (*pStartingCity > BUFFALO || *pStartingCity < TORONTO)
+	{
+		*pStartingCity = getNum();
+		if (*pStartingCity == 7)
+		{
+			exitProgram = true;
+			break;
+		}
+	}
+
+	if (!exitProgram)
+	{
+		cout << "Please enter your ending city index: ";
+		while (*pEndingCity > BUFFALO || *pEndingCity < TORONTO)
+		{
+			*pEndingCity = getNum();
+		}
+
+		cout << "Please enter your departure time (hhmm): ";
+		*pDepartureTime = getNum();
+		cout << endl;
+	}
+	return exitProgram;
+}
+
+
+
+int main()
+{
+	char cities[NUM_CITIES][10] = { "Toronto", "Atlanta", "Austin", "Santa Fe", "Denver", "Chicago", "Buffalo" };
+	int startingCity = INT32_MAX;
+	int endingCity = INT32_MAX; 
+	int departureTime = INT32_MAX;
+	int currentTime;
+	int currentCity;
+	int currentFastest = INT32_MAX;
+	list currentFastestRoute;
+	bool exitProgram = false;
+
+	while (!exitProgram)
+	{
+		printCityHeader();
+		exitProgram = getUserInformation(&startingCity, &endingCity, &departureTime);
+
+		if (!exitProgram)
+		{
+			currentTime = departureTime;
+			currentCity = startingCity;
+
+			cout << "Flying from " << cities[startingCity] << " to " << cities[endingCity] << endl;
+			cout << "Starting from " << cities[startingCity] << " at ";
+			localizedTime(departureTime, currentCity, true);
+
+			for (int i = TORONTO; i < NUM_CITIES; i++)
+			{
+				flightTime ft = getBestFlightOut(currentTime, currentCity, i);
+				if (ft.flightArrival != 0)
+				{
+					list ls;
+					ls.createNode(currentCity, i, ft.flightDeparture, ft.flightArrival + getTimezoneModifier(currentCity, i));
+					branchFromAirport(ls, i, ft.flightArrival + getTimezoneModifier(currentCity, i), endingCity, &currentFastest, &currentFastestRoute, departureTime);
+				}
+			}
+			int totalTime = currentFastestRoute.getEndTime() - departureTime + getTimezoneModifier(startingCity, endingCity);
+			if (departureTime % 100 > currentFastestRoute.getEndTime() % 100)
+			{
+				totalTime -= 40;
+			}
+			currentFastestRoute.display(totalTime);
+
+			startingCity = INT32_MAX;
+			endingCity = INT32_MAX;
+			departureTime = INT32_MAX;
+		}
+	}
+	return 0;
 }
