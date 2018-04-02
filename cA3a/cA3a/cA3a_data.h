@@ -1,10 +1,11 @@
 #pragma once
 
+#define NUM_CITIES 7
 
 
 int* getFlights(int startingLocation, int destination)
 {
-	static int flights[7][7][35] = {
+	static int flights[NUM_CITIES][NUM_CITIES][50] = {
 		{	// from Toronto
 			//To Toronto
 			{ 0 },
